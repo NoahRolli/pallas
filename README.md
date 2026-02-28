@@ -1,4 +1,4 @@
-# 🎓 StudyAI
+# StudyAI
 
 AI-powered study companion that parses lecture notes (PDF, Word, PowerPoint, Excel, images via OCR, Markdown), generates smart summaries, explains key terms, and visualizes knowledge as interactive, zoomable mindmaps.
 
