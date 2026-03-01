@@ -26,7 +26,7 @@ AI-powered study companion and encrypted journal. Parses lecture notes (PDF, Wor
 
 ## Project Structure
 ```
-studyAI/
+pallas/
 ├── backend/
 │   ├── api/                # REST endpoints
 │   │   ├── modules.py      # CRUD for study modules
