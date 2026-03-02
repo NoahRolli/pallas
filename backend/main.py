@@ -46,3 +46,5 @@ def health():
 # API-Routen registrieren
 app.include_router(modules_router)
 app.include_router(documents_router)
+from backend.api.summaries import router as summaries_router
+app.include_router(summaries_router)
