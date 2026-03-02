@@ -18,4 +18,4 @@ backend_storage
 
 # IDE
 .vscode/settings.json
-.DS_Store
+.DS_Storebackup.sh
