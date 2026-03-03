@@ -1,0 +1,12 @@
+# Journal Overview
+
+A fully encrypted, AI-powered personal journal. All data is AES-256-GCM encrypted and AI analysis runs exclusively on local Ollama — no data ever leaves the device.
+
+## Features
+
+- Encrypted entries (title, content, date)
+- Separate database from main application
+- Session-based access with auto-lock
+- Mood tracking via sentiment analysis
+- Topic clustering via local embeddings
+- Storyline detection across entries

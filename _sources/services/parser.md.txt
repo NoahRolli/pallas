@@ -1,0 +1,21 @@
+# Parser Service
+
+Extracts text from 7 file formats.
+
+## Supported Formats
+
+| Format | Library |
+|---|---|
+| PDF | PyMuPDF (fitz) |
+| Word (.docx) | python-docx |
+| PowerPoint (.pptx) | python-pptx |
+| Excel (.xlsx) | openpyxl |
+| Images (.png/.jpg) | Tesseract OCR |
+| Markdown (.md) | Raw text |
+| Text (.txt) | Python built-in |
+
+## Source Code
+```{eval-rst}
+.. automodule:: backend.services.parser_service
+   :members:
+```

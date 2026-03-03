@@ -1,0 +1,23 @@
+# Summaries API
+
+AI-generated summaries with key terms, powered by Claude or Ollama.
+
+## Endpoints
+
+### `POST /api/documents/{id}/summarize`
+Generate a summary for a document using the active AI provider.
+
+### `GET /api/documents/{id}/summaries`
+Returns all summaries for a document.
+
+### `GET /api/summaries/{id}`
+Returns a single summary.
+
+### `DELETE /api/summaries/{id}`
+Delete a summary.
+
+## Source Code
+```{eval-rst}
+.. automodule:: backend.api.summaries
+   :members:
+```

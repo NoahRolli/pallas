@@ -1,0 +1,22 @@
+# Journal Security
+
+## Encryption
+
+- **Password hashing:** Argon2id (memory: 64MB, iterations: 3, parallelism: 4)
+- **Data encryption:** AES-256-GCM with unique IV per entry
+- **Key management:** AES key exists only in RAM, wiped on lock/restart
+
+## Design Principles
+
+- Password is never stored in plaintext
+- No password recovery by design
+- Journal database is completely separate from main app
+- No code path connects journal to Claude API
+- Ollama availability check on startup
+
+## Auto-Lock Triggers
+
+- Inactivity timeout (default: 30 minutes)
+- Screen lock detection
+- Navigate away from journal page
+- Server restart

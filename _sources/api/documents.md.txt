@@ -1,0 +1,24 @@
+# Documents API
+
+Documents are uploaded files linked to a study module. Text is automatically extracted on upload.
+
+## Supported Formats
+
+PDF, Word (.docx), PowerPoint (.pptx), Excel (.xlsx), Images (.png/.jpg via OCR), Markdown (.md), Text (.txt)
+
+## Endpoints
+
+### `GET /api/modules/{id}/documents`
+Returns all documents in a module.
+
+### `POST /api/modules/{id}/documents`
+Upload a file. The parser service automatically extracts text.
+
+### `DELETE /api/documents/{id}`
+Delete a document and its file from storage.
+
+## Source Code
+```{eval-rst}
+.. automodule:: backend.api.documents
+   :members:
+```

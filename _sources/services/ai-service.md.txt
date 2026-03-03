@@ -1,0 +1,22 @@
+# AI Service
+
+Unified interface for AI providers with runtime switching.
+
+## Provider Pattern
+
+The AI service abstracts two providers behind a common interface:
+
+- **Claude Provider** — Anthropic Claude API (cloud)
+- **Ollama Provider** — Local Ollama instance (private)
+
+Both implement: `summarize()`, `explain_term()`, `generate_mindmap()`, `deep_dive()`
+
+## Switching Providers
+
+The active provider is set in `backend/infra/config.py` via `AI_PROVIDER` and can be changed at runtime.
+
+## Source Code
+```{eval-rst}
+.. automodule:: backend.services.ai_service
+   :members:
+```

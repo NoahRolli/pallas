@@ -1,0 +1,36 @@
+Pallas Documentation
+====================
+
+AI-powered study companion that parses lecture notes (PDF, Word, PowerPoint, Excel, images via OCR, Markdown), generates smart summaries, explains key terms, and visualizes knowledge as interactive, zoomable mindmaps. Built with FastAPI, React, and Claude/Ollama. WIP
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Overview
+
+   getting-started
+   architecture
+
+.. toctree::
+   :maxdepth: 2
+   :caption: API Reference
+
+   api/modules
+   api/documents
+   api/summaries
+   api/mindmap
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Services
+
+   services/parser
+   services/ai-service
+   services/mindmap-service
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Journal
+
+   journal/overview
+   journal/security
+   journal/api

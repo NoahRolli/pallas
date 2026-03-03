@@ -1,0 +1,21 @@
+# Journal API
+
+## Authentication
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/journal/status` | Check if journal is set up and unlocked |
+| POST | `/api/journal/setup` | Set password (first time only) |
+| POST | `/api/journal/unlock` | Start session |
+| POST | `/api/journal/lock` | End session |
+
+## Entries
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/journal/entries` | List all entries (decrypted) |
+| POST | `/api/journal/entries` | Create entry (encrypted) |
+| GET | `/api/journal/entries/{id}` | Get single entry |
+| PUT | `/api/journal/entries/{id}` | Update entry |
+| DELETE | `/api/journal/entries/{id}` | Soft-delete entry |
+| POST | `/api/journal/entries/{id}/restore` | Restore deleted entry |

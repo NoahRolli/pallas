@@ -1,0 +1,20 @@
+# Mindmap API
+
+Interactive mindmaps generated from summaries with zoom/deep-dive capability.
+
+## Endpoints
+
+### `POST /api/summaries/{id}/mindmap`
+Generate a mindmap from a summary.
+
+### `GET /api/summaries/{id}/mindmap`
+Retrieve a stored mindmap as a tree structure.
+
+### `POST /api/mindmap/nodes/{id}/expand`
+Deep dive into a node — generates child nodes with more detail.
+
+## Source Code
+```{eval-rst}
+.. automodule:: backend.api.mindmap
+   :members:
+```

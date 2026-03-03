@@ -1,0 +1,17 @@
+# Mindmap Service
+
+Builds hierarchical mindmap structures from AI-generated data.
+
+## Depth Levels
+
+| Level | Content |
+|---|---|
+| 0 | Overview — main topics |
+| 1 | Chapters — subtopics |
+| 2+ | Detail — deep dive nodes |
+
+## Source Code
+```{eval-rst}
+.. automodule:: backend.services.mindmap_service
+   :members:
+```
