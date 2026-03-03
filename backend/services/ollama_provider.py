@@ -3,6 +3,7 @@
 # Läuft komplett lokal — keine Daten verlassen den Rechner
 
 import json
+import re
 import httpx
 from backend.infra.config import OLLAMA_BASE_URL, OLLAMA_MODEL
 
@@ -49,6 +50,16 @@ class OllamaProvider:
         except Exception:
             return False
 
+    def _parse_json(self, text: str):
+        """
+        Extrahiert JSON aus Ollama-Antworten.
+        Ollama packt JSON oft in Markdown-Backticks, die wir entfernen.
+        """
+        # Markdown-Backticks entfernen (```json ... ``` oder ``` ... ```)
+        cleaned = re.sub(r"```(?:json)?\s*", "", text)
+        cleaned = cleaned.strip("`").strip()
+        return json.loads(cleaned)
+    
     async def summarize(self, text: str) -> dict:
         """
         Generiert eine Zusammenfassung mit Schlüsselbegriffen.
@@ -66,7 +77,7 @@ Text:
 
         response_text = await self._chat(prompt)
         try:
-            return json.loads(response_text)
+            return self._parse_json(response_text)
         except json.JSONDecodeError:
             return {"summary": response_text, "key_terms": []}
 
@@ -99,7 +110,7 @@ Text:
 
         response_text = await self._chat(prompt)
         try:
-            return json.loads(response_text)
+            return self._parse_json(response_text)
         except json.JSONDecodeError:
             return [{"label": "Fehler beim Parsen", "detail": response_text, "children": []}]
 
@@ -116,6 +127,6 @@ Antworte NUR im JSON-Format:
 
         response_text = await self._chat(prompt)
         try:
-            return json.loads(response_text)
+            return self._parse_json(response_text)
         except json.JSONDecodeError:
             return [{"label": "Fehler", "detail": response_text, "children": []}]
