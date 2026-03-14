@@ -2,12 +2,14 @@
 // Lädt Module von der API (GET /api/modules/)
 // Zeigt sie als Karten an mit Name, Beschreibung und Farbe
 // Enthält einen Button um neue Module zu erstellen
+// Modul-Karten sind klickbar und führen zur Detailseite (/modules/:id)
 //
 // Nutzt useState für lokalen State und useEffect für den API-Call
 // beim ersten Laden der Seite
 
 import { useState, useEffect } from 'react'
-import { get, post, del } from '../hooks/useApi'
+import { Link } from 'react-router-dom'
+import { get, post, del } from '../hooks/useAPI'
 import type { Module, ModuleCreate } from '../types/models'
 
 function Dashboard() {
@@ -75,7 +77,12 @@ function Dashboard() {
   }
 
   // Modul löschen — wird beim Klick auf den Löschen-Button aufgerufen
-  async function deleteModule(id: number) {
+  async function deleteModule(id: number, event: React.MouseEvent) {
+    // stopPropagation verhindert dass der Klick auf "Löschen"
+    // auch den Link zur Detailseite auslöst
+    event.preventDefault()
+    event.stopPropagation()
+
     try {
       // DELETE /api/modules/{id}
       await del(`/api/modules/${id}`)
@@ -183,9 +190,10 @@ function Dashboard() {
       {/* Modul-Karten — Grid mit 1-3 Spalten je nach Bildschirmbreite */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {modules.map((module) => (
-          <div
+          <Link
+            to={`/modules/${module.id}`}
             key={module.id}
-            className="bg-gray-900 border border-gray-800 rounded-lg p-5 hover:border-gray-700 transition-colors"
+            className="block bg-gray-900 border border-gray-800 rounded-lg p-5 hover:border-gray-700 transition-colors"
           >
             {/* Farbiger Balken oben — zeigt die Modul-Farbe */}
             <div
@@ -206,15 +214,15 @@ function Dashboard() {
                 {new Date(module.created_at).toLocaleDateString('de-CH')}
               </span>
 
-              {/* Löschen-Button */}
+              {/* Löschen-Button — stopPropagation verhindert Navigation */}
               <button
-                onClick={() => deleteModule(module.id)}
+                onClick={(e) => deleteModule(module.id, e)}
                 className="text-xs text-red-400/50 hover:text-red-400 transition-colors"
               >
                 Löschen
               </button>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>
