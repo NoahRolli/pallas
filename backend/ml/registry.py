@@ -134,3 +134,18 @@ def log_run(
     )
     con.commit()
     return cur.lastrowid
+
+
+def open_prod_db(db_path: str) -> sqlite3.Connection:
+    """Oeffnet die Prod-pallas.db read-write fuer den produktiven Archiv-Strang.
+
+    Anders als open_ml_db gibt es KEIN ATTACH: in Prod liegen Rohtext
+    (documents.raw_text) und die berechneten Topic-/Cluster-Spalten in
+    derselben Tabelle (documents), co-located -- kein Zwei-DB-Tanz noetig.
+    """
+    p = Path(db_path)
+    if not p.exists():
+        raise FileNotFoundError(f"DB nicht gefunden: {p}")
+    con = sqlite3.connect(p)
+    con.execute("PRAGMA foreign_keys = OFF")
+    return con
