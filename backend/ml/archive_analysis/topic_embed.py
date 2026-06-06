@@ -1,19 +1,18 @@
-"""Schritt 4.6 — Embedding der Topic-Summaries.
+"""Schritt 4.6 — Embedding der Topic-Summaries (prod-nativ).
 
 Embedded die in Schritt 4.5 erzeugten topic_summary-Texte mit bge-m3 via
-Ollama und schreibt 1024-dim float32-Vektoren in archive_documents.
-topic_embedding. Dieser Vektor ersetzt das (format-belastete) Mean-Pooling
-ueber Chunk-Embeddings als Clustering-Input fuer Schritt 4.
+Ollama und schreibt 1024-dim float32-Vektoren in documents.topic_embedding.
+Dieser Vektor ist der Clustering-Input fuer Schritt 4.
 
-Anders als embed.py (20'739 Chunks): hier nur 1254 kurze Summaries, ein
-Forward-Pass pro Doc, kurze Inputs -> kein output_reserve-Bloat, Minuten
-statt Stunden. Resume via WHERE topic_embedding IS NULL.
+Prod-nativ: arbeitet direkt auf documents (PK id), single --db, kein ATTACH.
+Der Mini-Doc-Filter muss hier nicht wiederholt werden -- er propagiert ueber
+topic_summary: nur Docs mit Summary werden embedded, und Summaries gibt es
+nur fuer Docs >= MIN_CHARS (siehe topic_extract). Resume via
+WHERE topic_embedding IS NULL.
 
 Aufruf:
-  python -m backend.ml.archive_analysis.topic_embed \
-      --ml-db <PALLAS_DATA_DIR>/ml_phase1.db \
-      --pallas-db <PALLAS_DATA_DIR>/pallas-phase1-snapshot.db \
-      --batch-size 16
+  python3 -m backend.ml.archive_analysis.topic_embed --db data/pallas-snapshot.db --limit 10
+  python3 -m backend.ml.archive_analysis.topic_embed --db /data/pallas.db --batch-size 16
 """
 import argparse
 import json
@@ -22,7 +21,7 @@ import sys
 import time
 import urllib.request
 
-from backend.ml.registry import open_ml_db, log_run
+from backend.ml.registry import open_prod_db, log_run
 
 OLLAMA_URL = "http://127.0.0.1:11434/api/embed"
 MODEL = "bge-m3"
@@ -58,7 +57,7 @@ def pack(vec):
 def fetch_pending(con, limit):
     """Docs mit Summary aber ohne topic_embedding (Resume-faehig)."""
     q = (
-        "SELECT document_id, topic_summary FROM archive_documents "
+        "SELECT id, topic_summary FROM documents "
         "WHERE topic_embedding IS NULL "
         "AND topic_summary IS NOT NULL AND topic_summary != ''"
     )
@@ -83,32 +82,27 @@ def run(con, batch_size, limit):
         vecs = embed_batch(texts)
         for doc_id, vec in zip(ids, vecs):
             con.execute(
-                "UPDATE archive_documents SET topic_embedding=? "
-                "WHERE document_id=?",
+                "UPDATE documents SET topic_embedding=? WHERE id=?",
                 (pack(vec), doc_id),
             )
         con.commit()
         done += len(batch)
         rate = done / (time.time() - t0)
         eta = (total - done) / rate if rate else 0
-        print(
-            f"  {done}/{total}  {rate:.2f} doc/s  eta={eta/60:.1f}min",
-            flush=True,
-        )
+        print(f"  {done}/{total}  {rate:.2f} doc/s  eta={eta/60:.1f}min", flush=True)
     log_run(con, "topic_embed", {"model": MODEL, "batch_size": batch_size},
             {"embedded": done, "total": total})
     print("Fertig.")
 
 
 def main():
-    p = argparse.ArgumentParser(description="Schritt 4.6 Topic-Embedding")
-    p.add_argument("--ml-db", required=True)
-    p.add_argument("--pallas-db", required=True)
+    p = argparse.ArgumentParser(description="Schritt 4.6 Topic-Embedding (prod-nativ)")
+    p.add_argument("--db", required=True, help="Pfad zur pallas.db (Snapshot oder Prod)")
     p.add_argument("--batch-size", type=int, default=16)
     p.add_argument("--limit", type=int, default=0)
     args = p.parse_args()
 
-    con = open_ml_db(args.ml_db, args.pallas_db)
+    con = open_prod_db(args.db)
     try:
         run(con, args.batch_size, args.limit)
     finally:
