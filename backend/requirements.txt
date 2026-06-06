@@ -40,7 +40,10 @@ argon2-cffi                 # Argon2id Passwort-Hashing (Journal)
 
 # --- Auth (Olymp Deployment) ---
 bcrypt                      # Passwort-Verifizierung gegen auth.json
-numpy
+
+# --- Numerik / Clustering ---
+numpy                       # Vektor-Mathematik (Embeddings, Archiv-Clustering)
+scipy                       # Agglomeratives Clustering (scipy.cluster.hierarchy)
 
 # --- Config ---
 python-dotenv==1.2.2         # .env-Datei für lokale Dev-Credentials (Groq-Key etc.)
