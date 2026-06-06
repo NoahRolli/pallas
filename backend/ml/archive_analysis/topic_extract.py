@@ -1,21 +1,27 @@
-"""Schritt 4.5 — LLM-Topic-Extraktion.
+"""Schritt 4.5 — LLM-Topic-Extraktion (prod-nativ).
 
 Erzeugt pro Dokument eine themenfokussierte englische Kurz-Zusammenfassung
 via Ollama (gemma4:e2b). Diese Summary ersetzt den Rohtext als Clustering-
 Input und eliminiert das Chat-Format-Signal, das bge-m3 auf Rohtexten
 dominiert (siehe Befund 1-6, Chat 80).
 
+Prod-nativ: arbeitet direkt auf der pallas.db `documents`-Tabelle
+(PK `id`, Rohtext `raw_text` co-located) -- kein ATTACH, kein Zwei-DB-Tanz.
+Der Mini-Doc-Filter (MIN_CHARS=500, in Schritt 0 validiert) sitzt am Eingang;
+Docs darunter bekommen nie eine Summary und fallen damit aus allen
+Folge-Schritten heraus (die auf topic_summary/topic_embedding keyen).
+
+Voraussetzung: prod_schema_migrate hat die Topic-Spalten angelegt.
+
 Modi:
-  --sample N : N zufaellige Docs (stratifiziert), Summaries werden nur
-               ausgegeben, KEIN DB-Write. Fuer manuelle Qualitaetspruefung.
+  --sample N : N Docs (laengste + zufaellig), Summaries werden nur ausgegeben,
+               KEIN DB-Write. Fuer manuelle Qualitaetspruefung.
   (default)  : Full-Run mit Resume (WHERE topic_summary IS NULL), schreibt
-               topic_summary + Metadaten in archive_documents.
+               topic_summary + Metadaten nach documents.
 
 Aufruf:
-  python -m backend.ml.archive_analysis.topic_extract \
-      --ml-db <PALLAS_DATA_DIR>/ml_phase1.db \
-      --pallas-db <PALLAS_DATA_DIR>/pallas-phase1-snapshot.db \
-      --sample 20
+  python3 -m backend.ml.archive_analysis.topic_extract --db data/pallas-snapshot.db --sample 6
+  python3 -m backend.ml.archive_analysis.topic_extract --db /data/pallas.db            (Full-Run)
 """
 import argparse
 import json
@@ -25,10 +31,12 @@ import time
 import urllib.request
 from datetime import datetime, timezone
 
-from backend.ml.registry import open_ml_db, log_run
+from backend.ml.registry import open_prod_db, log_run
 
 OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
 DEFAULT_MODEL = "gemma4:e2b"
+
+MIN_CHARS = 500  # Schritt-1-Filter (in Schritt 0 validiert); identisch zu preprocess.py
 
 PROMPT = (
     "Identify the subject matter of the document below. "
@@ -42,6 +50,8 @@ HEAD_CHARS = 8000
 TAIL_CHARS = 2000
 MIN_SUMMARY_CHARS = 50
 UNSURE_MARKERS = ("unclear", "cannot determine", "not enough", "unsure")
+
+REQUIRED_COLUMNS = ("topic_summary", "topic_summary_model", "topic_summary_at")
 
 
 def truncate(text):
@@ -86,48 +96,39 @@ def is_degenerate(summary):
     return any(m in low for m in UNSURE_MARKERS)
 
 
-def ensure_columns(con):
-    """Idempotentes ALTER (create_all legt keine neuen Spalten an)."""
-    cols = {r[1] for r in con.execute("PRAGMA table_info(archive_documents)")}
-    add = {
-        "topic_summary": "TEXT",
-        "topic_embedding": "BLOB",
-        "topic_summary_model": "TEXT",
-        "topic_summary_at": "TIMESTAMP",
-    }
-    for name, typ in add.items():
-        if name not in cols:
-            con.execute(
-                f"ALTER TABLE archive_documents ADD COLUMN {name} {typ}"
-            )
-    con.commit()
+def require_columns(con):
+    """Bricht ab, wenn die Migration nicht gelaufen ist."""
+    cols = {r[1] for r in con.execute("PRAGMA table_info(documents)")}
+    missing = [c for c in REQUIRED_COLUMNS if c not in cols]
+    if missing:
+        raise SystemExit(
+            f"FEHLER: Spalten {missing} fehlen auf 'documents'. Erst Migration laufen lassen:\n"
+            "  python3 -m backend.ml.archive_analysis.prod_schema_migrate --db <DB>"
+        )
 
 
-def fetch_doc(con, document_id):
-    """raw_text + display_name aus attached pallas-DB (RO)."""
+def fetch_doc(con, doc_id):
+    """raw_text + display_name aus documents (co-located, kein ATTACH)."""
     row = con.execute(
-        "SELECT raw_text, display_name FROM pallas.documents WHERE id = ?",
-        (document_id,),
+        "SELECT raw_text, display_name FROM documents WHERE id = ?",
+        (doc_id,),
     ).fetchone()
     return (row[0] or "", row[1] or "") if row else ("", "")
 
 
 def stratified_ids(con, n):
-    """Repraesentatives Sample: lange Docs + Pallas-Anker + Rest."""
+    """QA-Sample: laengste Docs (Truncation-Test) + zufaelliger Rest, >= MIN_CHARS."""
     rows = con.execute(
-        "SELECT document_id, is_pallas_anchor, needs_chunking "
-        "FROM archive_documents"
+        "SELECT id, length(raw_text) AS n FROM documents "
+        "WHERE raw_text IS NOT NULL AND length(raw_text) >= ?",
+        (MIN_CHARS,),
     ).fetchall()
-    random.shuffle(rows)
-    longs = [r[0] for r in rows if r[2]][: max(1, n // 4)]
-    anchors = [r[0] for r in rows if r[1] and r[0] not in longs][: max(1, n // 6)]
-    picked = longs + anchors
-    for r in rows:
-        if len(picked) >= n:
-            break
-        if r[0] not in picked:
-            picked.append(r[0])
-    return picked[:n]
+    by_len = sorted(rows, key=lambda r: r[1] or 0, reverse=True)
+    longs = [r[0] for r in by_len[: max(1, n // 4)]]
+    longset = set(longs)
+    rest = [r[0] for r in rows if r[0] not in longset]
+    random.shuffle(rest)
+    return (longs + rest)[:n]
 
 
 def run_sample(con, model, n):
@@ -145,13 +146,16 @@ def run_sample(con, model, n):
 
 def run_full(con, model, limit):
     """Full-Run mit Resume und Per-Doc-Commit."""
-    ensure_columns(con)
-    q = "SELECT document_id FROM archive_documents WHERE topic_summary IS NULL"
+    require_columns(con)
+    q = ("SELECT id FROM documents "
+         "WHERE topic_summary IS NULL AND length(raw_text) >= ?")
+    params = [MIN_CHARS]
     if limit:
-        q += f" LIMIT {int(limit)}"
-    rows = con.execute(q).fetchall()
+        q += " LIMIT ?"
+        params.append(int(limit))
+    rows = con.execute(q, params).fetchall()
     total = len(rows)
-    print(f"Full-Run: {total} Docs offen, Modell={model}")
+    print(f"Full-Run: {total} Docs offen (>= {MIN_CHARS} Zeichen), Modell={model}")
     done, t0 = 0, time.time()
     for (doc_id,) in rows:
         raw, name = fetch_doc(con, doc_id)
@@ -159,8 +163,8 @@ def run_full(con, model, limit):
         if is_degenerate(summary):
             summary = name or summary
         con.execute(
-            "UPDATE archive_documents SET topic_summary=?, "
-            "topic_summary_model=?, topic_summary_at=? WHERE document_id=?",
+            "UPDATE documents SET topic_summary=?, topic_summary_model=?, "
+            "topic_summary_at=? WHERE id=?",
             (summary, model, datetime.now(timezone.utc).isoformat(), doc_id),
         )
         con.commit()
@@ -168,25 +172,21 @@ def run_full(con, model, limit):
         if done % 25 == 0 or done == total:
             rate = done / (time.time() - t0)
             eta = (total - done) / rate if rate else 0
-            print(
-                f"  {done}/{total}  {rate:.2f} doc/s  eta={eta/60:.1f}min",
-                flush=True,
-            )
-    log_run(con, "topic_extract", {"model": model},
+            print(f"  {done}/{total}  {rate:.2f} doc/s  eta={eta/60:.1f}min", flush=True)
+    log_run(con, "topic_extract", {"model": model, "min_chars": MIN_CHARS},
             {"summarized": done, "total": total})
     print("Fertig.")
 
 
 def main():
-    p = argparse.ArgumentParser(description="Schritt 4.5 Topic-Extraktion")
-    p.add_argument("--ml-db", required=True)
-    p.add_argument("--pallas-db", required=True)
+    p = argparse.ArgumentParser(description="Schritt 4.5 Topic-Extraktion (prod-nativ)")
+    p.add_argument("--db", required=True, help="Pfad zur pallas.db (Snapshot oder Prod)")
     p.add_argument("--model", default=DEFAULT_MODEL)
     p.add_argument("--sample", type=int, default=0)
     p.add_argument("--limit", type=int, default=0)
     args = p.parse_args()
 
-    con = open_ml_db(args.ml_db, args.pallas_db)
+    con = open_prod_db(args.db)
     try:
         if args.sample:
             run_sample(con, args.model, args.sample)
