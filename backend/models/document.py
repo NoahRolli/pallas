@@ -1,7 +1,9 @@
 # Model für hochgeladene Dokumente (PDF, Word, TXT etc.)
 # Dokument gehört entweder zu einem Modul ODER direkt zu einem Ordner
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import (
+    Column, Integer, String, Text, DateTime, ForeignKey, Float, LargeBinary,
+)
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from backend.models.database import Base
@@ -37,9 +39,39 @@ class Document(Base):
     # Zeitstempel des Uploads
     uploaded_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
+    # --- Semantischer Archiv-Strang (ML Phase 2) -------------------------
+    # Befüllt durch backend/ml/archive_analysis/*; ORM-seitig read-only.
+    # Spalten/Typen 1:1 aus prod_schema_migrate.py.
+
+    # LLM-generierte Topic-Zusammenfassung (gemma4:e2b) — Basis fürs Embedding
+    topic_summary = Column(Text, nullable=True)
+
+    # bge-m3 Embedding der Summary, 1024-dim float32 als gepackte Bytes (BLOB)
+    topic_embedding = Column(LargeBinary, nullable=True)
+
+    # Modell-Tag der Summary-Generierung (z.B. "gemma4:e2b")
+    topic_summary_model = Column(Text, nullable=True)
+
+    # Zeitstempel der Summary-Generierung
+    topic_summary_at = Column(DateTime, nullable=True)
+
+    # Zugeordneter Archiv-Cluster. FK nur auf ORM-Ebene (logisch) — die
+    # ALTER-TABLE-Migration konnte keinen physischen Constraint nachrüsten.
+    cluster_id = Column(Integer, ForeignKey("archive_clusters.cluster_id"),
+                        nullable=True, index=True)
+
+    # Silhouette-Score der Cluster-Zuordnung (negativ = Brücken-Doc)
+    silhouette = Column(Float, nullable=True)
+
+    # Nächstgelegener alternativer Cluster (für Brücken-Analyse)
+    nearest_cluster_id = Column(Integer, nullable=True)
+
     # Beziehung: Dokument gehört optional zu einem Modul
     module = relationship("Module", back_populates="documents")
 
     # Beziehung: Ein Dokument kann mehrere Zusammenfassungen haben
     summaries = relationship("Summary", back_populates="document",
                              cascade="all, delete-orphan")
+
+    # Beziehung: zugeordneter Archiv-Cluster (read-only Navigation)
+    archive_cluster = relationship("ArchiveCluster", back_populates="documents")

@@ -14,6 +14,7 @@
 # Pallas-Hauptmodels
 from backend.models.module import Module  # noqa: F401
 from backend.models.document import Document  # noqa: F401
+from backend.models.archive_cluster import ArchiveCluster  # noqa: F401
 from backend.models.summary import Summary  # noqa: F401
 from backend.models.mindmap_node import MindmapNode  # noqa: F401
 from backend.models.folder import Folder  # noqa: F401
