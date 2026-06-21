@@ -66,6 +66,10 @@ class Document(Base):
     # Nächstgelegener alternativer Cluster (für Brücken-Analyse)
     nearest_cluster_id = Column(Integer, nullable=True)
 
+    # Phase 4 -- 2D-Layout-Koordinaten des Docs (precompute via project_topics.py)
+    proj_x = Column(Float, nullable=True)
+    proj_y = Column(Float, nullable=True)
+
     # Beziehung: Dokument gehört optional zu einem Modul
     module = relationship("Module", back_populates="documents")
 

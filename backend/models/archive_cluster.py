@@ -36,5 +36,9 @@ class ArchiveCluster(Base):
     # Mittlere Silhouette des Clusters
     mean_silhouette = Column(Float, nullable=True)
 
+    # Phase 4 -- 2D-Layout-Position des Cluster-Hubs (precompute via project_topics.py)
+    hub_x = Column(Float, nullable=True)
+    hub_y = Column(Float, nullable=True)
+
     # Beziehung: alle Dokumente dieses Clusters (read-only Navigation)
     documents = relationship("Document", back_populates="archive_cluster")
