@@ -25,6 +25,7 @@ Aufruf:
 """
 import argparse
 import json
+import os
 import random
 import sys
 import time
@@ -33,8 +34,8 @@ from datetime import datetime, timezone
 
 from backend.ml.registry import open_prod_db, log_run
 
-OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
-DEFAULT_MODEL = "gemma4:e2b"
+OLLAMA_URL = os.environ.get("OLLAMA_PIPELINE_URL", "http://127.0.0.1:11434/api/generate")
+DEFAULT_MODEL = os.environ.get("OLLAMA_MODEL", "gemma4:26b")
 
 MIN_CHARS = 500  # Schritt-1-Filter (in Schritt 0 validiert); identisch zu preprocess.py
 
