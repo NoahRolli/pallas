@@ -10,13 +10,14 @@ Schema wird von prod_schema_migrate angelegt; dieser Schritt schreibt nur Daten.
 """
 import argparse
 import json
+import os
 import sys
 import urllib.request
 
 from backend.ml.registry import open_prod_db, log_run
 
-DEFAULT_MODEL = "gemma4:e2b"
-DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
+DEFAULT_MODEL = os.environ.get("OLLAMA_MODEL", "gemma4:26b")
+DEFAULT_OLLAMA_URL = os.environ.get("OLLAMA_PIPELINE_URL", "http://127.0.0.1:11434/api/generate")
 SAMPLE_SIZE = 25
 
 PROMPT = (
