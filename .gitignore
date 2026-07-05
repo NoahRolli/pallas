@@ -36,3 +36,8 @@ docs/build/
 # Export-Zips (nicht versionieren)
 pallas-src.zip
 sport-muscle-groups.zip
+
+# Lokaler Arbeitsordner: DBs, Snapshots, Backups — nie ins Repo
+data/
+*.bak
+*.bak-*
