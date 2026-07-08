@@ -47,100 +47,111 @@ def _find_mentions(text: str, name: str) -> list[str]:
     return snippets
 
 
+# Max. Konzept-Laenge in Woertern (aus Daten: 7). N-Gramme bis hier pruefen.
+_MAX_CONCEPT_WORDS = 8
+# Tokenizer: Woerter + ihre Positionen im Text (fuer Snippet-Kontext).
+_WORD_RE = re.compile(r"\w+", re.UNICODE)
+
+
+def _snippet_at(text: str, start: int, end: int) -> str:
+    """Kontext-Snippet um [start, end) — identisch zur alten _find_mentions-Logik."""
+    s = max(0, start - 50)
+    e = min(len(text), end + 50)
+    snip = text[s:e].strip()
+    if s > 0:
+        snip = "..." + snip
+    if e < len(text):
+        snip = snip + "..."
+    return snip
+
+
+def _find_all_mentions(text: str, concept_names: set[str]) -> dict[str, list[str]]:
+    """Scannt den Text EINMAL und findet Vorkommen ALLER concept_names.
+
+    Ersetzt die alte Pro-Konzept-Regex-Schleife: statt fuer jeden der ~15k
+    Konzeptnamen einen eigenen \b-Regex ueber den ganzen Text laufen zu lassen,
+    tokenisieren wir den Text einmal und pruefen N-Gramme (Laenge 1.._MAX)
+    gegen das Konzept-Set (O(1)-Lookup). Semantik bleibt Wortgrenzen-Match,
+    case-insensitive — wie zuvor.
+    """
+    # Token mit Position (lower fuer Vergleich, Original-Positionen fuer Snippet)
+    toks = [(m.group(0).lower(), m.start(), m.end()) for m in _WORD_RE.finditer(text)]
+    out: dict[str, list[str]] = {}
+    n = len(toks)
+    for i in range(n):
+        # N-Gramme ab Position i aufbauen, solange sinnvoll
+        upper = min(_MAX_CONCEPT_WORDS, n - i)
+        for size in range(1, upper + 1):
+            phrase = " ".join(toks[i + k][0] for k in range(size))
+            if phrase in concept_names:
+                start = toks[i][1]
+                end = toks[i + size - 1][2]
+                out.setdefault(phrase, []).append(_snippet_at(text, start, end))
+    return out
+
+
 @router.get("/unlinked-mentions")
 def get_unlinked_mentions(
     db: Session = Depends(get_db),
     limit: int = Query(100, ge=1, le=500),
 ):
-    """Findet Konzeptnamen in Notes/Summaries ohne WikiLink oder Source-Verknuepfung."""
-    # Alle Konzepte laden (min. 3 Zeichen, sonst zu viele Falsch-Positive)
-    concepts = db.query(Concept).filter(
-        Concept.name.isnot(None)
-    ).all()
-    concept_map = {c.name.lower(): c for c in concepts if len(c.name) >= 3}
+    """Findet Konzeptnamen in Notes/Summaries ohne WikiLink oder Source-Verknuepfung.
 
+    Ein-Durchlauf-Scan: pro Dokument wird der Text EINMAL tokenisiert und gegen
+    das Konzept-Set gematcht (_find_all_mentions), statt fuer jedes der ~15k
+    Konzepte einzeln einen Regex ueber den Text zu jagen. Semantik unveraendert.
+    """
+    # Konzepte laden (min. 3 Zeichen) -> Name(lower) -> Concept
+    concepts = db.query(Concept).filter(Concept.name.isnot(None)).all()
+    concept_map = {c.name.lower(): c for c in concepts if len(c.name) >= 3}
     if not concept_map:
         return {"mentions": [], "total": 0}
+    concept_names = set(concept_map.keys())
 
-    # Bestehende Source-Verknuepfungen laden (concept_id → set von (type, id))
-    existing_sources = db.query(
-        ConceptSource.concept_id,
-        ConceptSource.source_type,
-        ConceptSource.source_id,
-    ).all()
+    # Bestehende Source-Verknuepfungen (concept_id, type, source_id)
     linked_set = {
         (cs.concept_id, cs.source_type, cs.source_id)
-        for cs in existing_sources
+        for cs in db.query(
+            ConceptSource.concept_id,
+            ConceptSource.source_type,
+            ConceptSource.source_id,
+        ).all()
     }
 
     mentions = []
 
-    # Notes scannen
-    notes = db.query(Note).all()
-    for note in notes:
-        html = (note.content or "")
+    def _scan(source_type, source_id, source_title, html):
         wiki_titles = _extract_wiki_titles(html)
         plaintext = _strip_html(html)
-        # Auch Titel durchsuchen
-        full_text = f"{note.title} {plaintext}"
+        full_text = f"{source_title or ''} {plaintext}"
+        found = _find_all_mentions(full_text, concept_names)
+        title_lower = (source_title or "").lower()
+        for name, snippets in found.items():
+            if name == title_lower:            # Selbstreferenz
+                continue
+            if name in wiki_titles:            # bereits per WikiLink verlinkt
+                continue
+            concept = concept_map[name]
+            if (concept.id, source_type, source_id) in linked_set:
+                continue                       # bereits per ConceptSource verknuepft
+            mentions.append({
+                "concept_id": concept.id,
+                "concept_name": concept.name,
+                "source_type": source_type,
+                "source_id": source_id,
+                "source_title": source_title or f"{source_type.capitalize()} #{source_id}",
+                "snippets": snippets[:3],
+                "count": len(snippets),
+            })
 
-        for name, concept in concept_map.items():
-            # Skip wenn Konzeptname == Note-Titel (Selbstreferenz)
-            if name == note.title.lower():
-                continue
-            # Skip wenn bereits per WikiLink verlinkt
-            if name in wiki_titles:
-                continue
-            # Skip wenn bereits per ConceptSource verknuepft
-            if (concept.id, "note", note.id) in linked_set:
-                continue
-            # Suchen
-            snippets = _find_mentions(full_text, name)
-            if snippets:
-                mentions.append({
-                    "concept_id": concept.id,
-                    "concept_name": concept.name,
-                    "source_type": "note",
-                    "source_id": note.id,
-                    "source_title": note.title,
-                    "snippets": snippets[:3],  # Max 3 Snippets pro Fund
-                    "count": len(snippets),
-                })
+    for note in db.query(Note).all():
+        _scan("note", note.id, note.title, note.content or "")
 
-    # Summaries scannen
-    summaries = db.query(Summary).all()
-    for summary in summaries:
-        html = (summary.content or "")
-        wiki_titles = _extract_wiki_titles(html)
-        plaintext = _strip_html(html)
-        full_text = f"{summary.title or ''} {plaintext}"
+    for summary in db.query(Summary).all():
+        _scan("summary", summary.id, summary.title, summary.content or "")
 
-        for name, concept in concept_map.items():
-            if name == (summary.title or "").lower():
-                continue
-            if name in wiki_titles:
-                continue
-            if (concept.id, "summary", summary.id) in linked_set:
-                continue
-            snippets = _find_mentions(full_text, name)
-            if snippets:
-                mentions.append({
-                    "concept_id": concept.id,
-                    "concept_name": concept.name,
-                    "source_type": "summary",
-                    "source_id": summary.id,
-                    "source_title": summary.title or f"Summary #{summary.id}",
-                    "snippets": snippets[:3],
-                    "count": len(snippets),
-                })
-
-    # Sortieren: meiste Erwaehnungen zuerst
     mentions.sort(key=lambda m: m["count"], reverse=True)
-
-    return {
-        "mentions": mentions[:limit],
-        "total": len(mentions),
-    }
+    return {"mentions": mentions[:limit], "total": len(mentions)}
 
 
 @router.post("/unlinked-mentions/{concept_id}/link")
