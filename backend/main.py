@@ -60,6 +60,7 @@ from backend.api.concepts_cluster_stream import router as concepts_cluster_strea
 from backend.api.concepts_graph import router as concepts_graph_router
 from backend.api.concepts_sphere_layout import router as concepts_sphere_layout_router
 from backend.api.concepts_unlinked import router as concepts_unlinked_router
+from backend.api.archive import router as archive_router
 from backend.api.concepts_gaps import router as concepts_gaps_router
 from backend.api.concepts_merge import router as concepts_merge_router
 from backend.api.settings import router as settings_router
@@ -181,6 +182,7 @@ app.include_router(git_tracker_router)
 app.include_router(concepts_graph_router)
 app.include_router(concepts_sphere_layout_router)
 app.include_router(concepts_unlinked_router)
+app.include_router(archive_router)
 app.include_router(concepts_gaps_router)
 app.include_router(concepts_merge_router)
 app.include_router(concepts_router)
