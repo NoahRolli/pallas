@@ -13,6 +13,7 @@ import DroppableFolder from '../components/DroppableFolder'
 import DroppableBreadcrumb from '../components/DroppableBreadcrumb'
 import ArchivForms from '../components/archiv/ArchivForms'
 import ArchivDocuments from '../components/archiv/ArchivDocuments'
+import ArchiveSemanticMap from '../components/archiv/ArchiveSemanticMap'
 import SortDropdown from '../components/SortDropdown'
 import { useDocumentSort } from '../hooks/useDocumentSort'
 import type { ModuleCreate } from '../types/models'
@@ -25,6 +26,7 @@ function Archiv() {
   const [showModuleForm, setShowModuleForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
+  const [view, setView] = useState<'folders' | 'semantic'>('folders')
 
   const folderSort = useDocumentSort(db.folders, {
     dateField: "created_at",
@@ -138,15 +140,30 @@ function Archiv() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3"><h1 className="hud-title text-glow text-2xl">{t.archiv.title}</h1><PageProviderBadge page="archiv" /></div>
         <div className="flex items-center gap-3">
-          <button onClick={() => { setShowFolderForm(!showFolderForm); setShowModuleForm(false) }} className="hud-btn">
-            {showFolderForm ? t.common.cancel : t.archiv.newFolder}
-          </button>
-          <button onClick={() => { setShowModuleForm(!showModuleForm); setShowFolderForm(false) }} className="hud-btn">
-            {showModuleForm ? t.common.cancel : t.archiv.newModule}
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setView('folders')} className="hud-btn text-xs"
+              style={{ color: view === 'folders' ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
+              Ordner
+            </button>
+            <button onClick={() => setView('semantic')} className="hud-btn text-xs"
+              style={{ color: view === 'semantic' ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
+              Semantisch
+            </button>
+          </div>
+          {view === 'folders' && (
+            <>
+              <button onClick={() => { setShowFolderForm(!showFolderForm); setShowModuleForm(false) }} className="hud-btn">
+                {showFolderForm ? t.common.cancel : t.archiv.newFolder}
+              </button>
+              <button onClick={() => { setShowModuleForm(!showModuleForm); setShowFolderForm(false) }} className="hud-btn">
+                {showModuleForm ? t.common.cancel : t.archiv.newModule}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
+      {view === 'folders' && (
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
 
       {/* Breadcrumbs (auch Drop-Targets fuer Folder-Verschiebung) */}
@@ -319,6 +336,9 @@ function Archiv() {
           )}
         </DragOverlay>
       </DndContext>
+      )}
+
+      {view === 'semantic' && <ArchiveSemanticMap />}
     </div>
   )
 }
