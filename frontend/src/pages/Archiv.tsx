@@ -143,11 +143,11 @@ function Archiv() {
           <div className="flex items-center gap-1">
             <button onClick={() => setView('folders')} className="hud-btn text-xs"
               style={{ color: view === 'folders' ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
-              Ordner
+              {t.archiv.semantic.viewFolders}
             </button>
             <button onClick={() => setView('semantic')} className="hud-btn text-xs"
               style={{ color: view === 'semantic' ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
-              Semantisch
+              {t.archiv.semantic.viewSemantic}
             </button>
           </div>
           {view === 'folders' && (

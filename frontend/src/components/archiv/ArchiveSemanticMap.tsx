@@ -10,6 +10,7 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { get } from '../../hooks/useAPI'
+import { useLanguage } from '../../hooks/useLanguage'
 import type { ArchiveLayout } from '../../types/archive'
 
 const SVG_W = 1000
@@ -28,9 +29,10 @@ function clusterColor(id: number | null): string {
 interface Tip { x: number; y: number; text: string; sub?: string }
 
 export default function ArchiveSemanticMap() {
+  const { t } = useLanguage()
   const [data, setData] = useState<ArchiveLayout | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [t, setT] = useState({ k: 1, x: 0, y: 0 })
+  const [tf, setTf] = useState({ k: 1, x: 0, y: 0 })
   const [tip, setTip] = useState<Tip | null>(null)
   const svgRef = useRef<SVGSVGElement | null>(null)
   const drag = useRef<{ x: number; y: number } | null>(null)
@@ -81,7 +83,7 @@ export default function ArchiveSemanticMap() {
     const handler = (e: WheelEvent) => {
       e.preventDefault()
       const p = toSvg(e.clientX, e.clientY)
-      setT((prev) => {
+      setTf((prev) => {
         const factor = Math.exp(-e.deltaY * 0.0015)
         const k = Math.min(MAX_K, Math.max(MIN_K, prev.k * factor))
         const wx = (p.x - prev.x) / prev.k
@@ -101,7 +103,7 @@ export default function ArchiveSemanticMap() {
     if (!drag.current) return
     const p = toSvg(e.clientX, e.clientY)
     const start = drag.current
-    setT((prev) => ({ k: prev.k, x: prev.x + (p.x - start.x), y: prev.y + (p.y - start.y) }))
+    setTf((prev) => ({ k: prev.k, x: prev.x + (p.x - start.x), y: prev.y + (p.y - start.y) }))
     drag.current = p
   }, [toSvg])
 
@@ -152,7 +154,7 @@ export default function ArchiveSemanticMap() {
           style={{ cursor: 'pointer' }}
           onMouseEnter={(e) => setTip({
             x: e.clientX, y: e.clientY,
-            text: c.label ?? `Cluster ${c.cluster_id}`, sub: `${c.size ?? 0} Docs`,
+            text: c.label ?? `Cluster ${c.cluster_id}`, sub: `${c.size ?? 0} ${t.archiv.semantic.docs}`,
           })}
           onMouseLeave={() => setTip(null)}
         />
@@ -161,7 +163,7 @@ export default function ArchiveSemanticMap() {
   }, [data, proj])
 
   // Hub-Labels: nur ab LABEL_ZOOM (100 Stueck, guenstig, reagiert auf Zoom/Pan).
-  const labels = t.k >= LABEL_ZOOM && data && proj
+  const labels = tf.k >= LABEL_ZOOM && data && proj
     ? data.clusters.map((c) =>
         c.hub_x == null || c.hub_y == null || !c.label ? null : (
           <text
@@ -181,14 +183,14 @@ export default function ArchiveSemanticMap() {
   if (error) {
     return (
       <div className="hud-card p-6" style={{ color: 'var(--color-danger)' }}>
-        Karte konnte nicht geladen werden: {error}
+        {t.archiv.semantic.loadError}: {error}
       </div>
     )
   }
   if (!data) {
     return (
       <div className="hud-card p-6" style={{ color: 'var(--color-text-muted)' }}>
-        Karte wird geladen …
+        {t.archiv.semantic.loading}
       </div>
     )
   }
@@ -198,11 +200,10 @@ export default function ArchiveSemanticMap() {
       <div className="flex items-center justify-between mb-3 text-xs"
         style={{ color: 'var(--color-text-muted)' }}>
         <span>
-          {data.counts.documents} Dokumente · {data.counts.clusters} Cluster ·
-          Ziehen zum Verschieben, Scrollen zum Zoomen
+          {data.counts.documents} {t.archiv.semantic.documents} · {data.counts.clusters} {t.archiv.semantic.clusters} · {t.archiv.semantic.hint}
         </span>
-        <button onClick={() => setT({ k: 1, x: 0, y: 0 })} className="hud-btn text-xs">
-          Ansicht zuruecksetzen
+        <button onClick={() => setTf({ k: 1, x: 0, y: 0 })} className="hud-btn text-xs">
+          {t.archiv.semantic.resetView}
         </button>
       </div>
       <div className="hud-card" style={{ overflow: 'hidden' }}>
@@ -217,7 +218,7 @@ export default function ArchiveSemanticMap() {
           onMouseUp={onUp}
           onMouseLeave={onUp}
         >
-          <g transform={`translate(${t.x},${t.y}) scale(${t.k})`}>
+          <g transform={`translate(${tf.x},${tf.y}) scale(${tf.k})`}>
             {hubs}
             {points}
             {labels}

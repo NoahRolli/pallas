@@ -78,7 +78,18 @@ const de = {
     emptyRoot: 'Noch nichts vorhanden.',
     emptyFolder: 'Ordner ist leer.',
     emptyHint: 'Erstelle einen Ordner oder ein Modul um loszulegen.',
-    moveFailed: 'Verschieben fehlgeschlagen',    uploadTitle: 'Datei hochladen',    uploadButton: 'Datei wählen',    uploading: 'Hochladen...',    dropHere: 'Datei hier ablegen...',    uploadNeedsFolder: 'Bitte zuerst einen Ordner öffnen.',    looseDocuments: 'Dokumente',
+    moveFailed: 'Verschieben fehlgeschlagen',    uploadTitle: 'Datei hochladen',    uploadButton: 'Datei wählen',    uploading: 'Hochladen...',    dropHere: 'Datei hier ablegen...',    uploadNeedsFolder: 'Bitte zuerst einen Ordner öffnen.',    semantic: {
+      viewFolders: 'Ordner',
+      viewSemantic: 'Semantisch',
+      loading: 'Karte wird geladen …',
+      loadError: 'Karte konnte nicht geladen werden',
+      hint: 'Ziehen zum Verschieben, Scrollen zum Zoomen',
+      resetView: 'Ansicht zurücksetzen',
+      documents: 'Dokumente',
+      clusters: 'Cluster',
+      docs: 'Docs',
+    },
+    looseDocuments: 'Dokumente',
   },
 
   // Hauptkalender

@@ -77,7 +77,18 @@ const en = {
     emptyRoot: 'Nothing here yet.',
     emptyFolder: 'Folder is empty.',
     emptyHint: 'Create a folder or module to get started.',
-    moveFailed: 'Move failed',    uploadTitle: 'Upload file',    uploadButton: 'Choose file',    uploading: 'Uploading...',    dropHere: 'Drop file here...',    uploadNeedsFolder: 'Please open a folder first.',    looseDocuments: 'Documents',
+    moveFailed: 'Move failed',    uploadTitle: 'Upload file',    uploadButton: 'Choose file',    uploading: 'Uploading...',    dropHere: 'Drop file here...',    uploadNeedsFolder: 'Please open a folder first.',    semantic: {
+      viewFolders: 'Folders',
+      viewSemantic: 'Semantic',
+      loading: 'Loading map …',
+      loadError: 'Could not load map',
+      hint: 'Drag to pan, scroll to zoom',
+      resetView: 'Reset view',
+      documents: 'Documents',
+      clusters: 'Clusters',
+      docs: 'Docs',
+    },
+    looseDocuments: 'Documents',
   },
 
   // Main Calendar
