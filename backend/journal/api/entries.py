@@ -5,6 +5,7 @@
 # Auto-Titel: Wenn kein Titel angegeben, generiert Ollama einen
 # language Query-Parameter steuert die Sprache der Auto-Titel-Generierung
 
+from datetime import timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from backend.journal.models.journal_database import get_journal_db
@@ -17,6 +18,17 @@ from backend.journal.api.schemas import EntryCreate, EntryUpdate
 
 # Router-Objekt — wird in main.py registriert
 router = APIRouter(prefix="/api/journal/entries", tags=["journal-entries"])
+
+
+def _iso_utc(dt):
+    """ISO-Zeitstempel MIT UTC-Marker.
+
+    Column(DateTime) speichert ohne Zeitzone. created_at/updated_at werden als
+    UTC geschrieben (journal_entry.py), kommen aber naiv zurueck. Ohne Marker
+    liest JS den String als Lokalzeit → Anzeige um den Offset verschoben.
+    replace() stellt die beim Speichern verlorene Info wieder her.
+    """
+    return dt.replace(tzinfo=timezone.utc).isoformat() if dt else None
 
 
 # GET /api/journal/entries — Alle Einträge abrufen (entschlüsselt)
@@ -35,8 +47,8 @@ def get_entries(db: Session = Depends(get_journal_db)):
                 "title": decrypt_text(entry.encrypted_title, aes_key),
                 "content": decrypt_text(entry.encrypted_content, aes_key),
                 "date": decrypt_text(entry.encrypted_date, aes_key),
-                "created_at": entry.created_at.isoformat(),
-                "updated_at": entry.updated_at.isoformat(),
+                "created_at": _iso_utc(entry.created_at),
+                "updated_at": _iso_utc(entry.updated_at),
             })
         except Exception:
             continue
@@ -93,8 +105,8 @@ def get_entry(entry_id: int, db: Session = Depends(get_journal_db)):
         "title": decrypt_text(entry.encrypted_title, aes_key),
         "content": decrypt_text(entry.encrypted_content, aes_key),
         "date": decrypt_text(entry.encrypted_date, aes_key),
-        "created_at": entry.created_at.isoformat(),
-        "updated_at": entry.updated_at.isoformat(),
+        "created_at": _iso_utc(entry.created_at),
+        "updated_at": _iso_utc(entry.updated_at),
     }
 
 
