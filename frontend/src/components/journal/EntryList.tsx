@@ -39,7 +39,10 @@ function EntryList({
       )
     }
     return [...result].sort((a, b) => {
+      // Primär: Tagesdatum (verschlüsselt in der DB → Sortierung erst nach dem Entschlüsseln)
+      // Sekundär: created_at bricht den Gleichstand bei mehreren Einträgen am selben Tag
       const cmp = a.date.localeCompare(b.date)
+        || a.created_at.localeCompare(b.created_at)
       return sortNewest ? -cmp : cmp
     })
   }, [entries, search, sortNewest])
