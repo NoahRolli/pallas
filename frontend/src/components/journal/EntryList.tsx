@@ -7,6 +7,16 @@ import { useLanguage } from '../../hooks/useLanguage'
 import type { JournalEntry, JournalEntryCreate } from '../../types/models'
 import EntryForm from './EntryForm'
 
+// Uhrzeit aus created_at (UTC-markiert vom Backend → new Date rechnet auf lokal um).
+// Hart auf de-CH wie ueberall im Projekt: 24h-Format, unabhaengig vom Sprach-Switch.
+// isNaN-Guard: created_at hat 6 Nachkommastellen (ISO-Spec kennt 3) — falls eine
+// Engine das nicht schluckt, lieber leer als "Invalid Date".
+function formatTime(iso: string): string {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ''
+  return d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+}
+
 interface EntryListProps {
   entries: JournalEntry[]
   editingId: number | null
@@ -107,6 +117,8 @@ function EntryList({
                 <span className="text-xs"
                   style={{ color: 'var(--color-text-muted)' }}>
                   {entry.date}
+                  {formatTime(entry.created_at)
+                    && ` \u00B7 ${formatTime(entry.created_at)}`}
                 </span>
                 <h3 className="text-sm font-medium"
                   style={{ color: 'var(--color-text-primary)' }}>
