@@ -3,7 +3,7 @@
 # ============================================
 
 # --- Web Framework ---
-fastapi==0.115.0            # REST-API Framework
+fastapi==0.135.1            # REST-API Framework
 uvicorn==0.30.0             # ASGI Server (startet FastAPI)
 python-multipart==0.0.12    # Für Datei-Uploads (multipart/form-data)
 pydantic==2.9.0             # Datenvalidierung (Schemas für API)
