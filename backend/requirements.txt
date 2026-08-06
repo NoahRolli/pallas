@@ -9,7 +9,7 @@ python-multipart==0.0.12    # Für Datei-Uploads (multipart/form-data)
 pydantic==2.9.0             # Datenvalidierung (Schemas für API)
 
 # --- Datenbank ---
-sqlalchemy==2.0.35          # ORM für SQLite Datenbankzugriff
+sqlalchemy==2.0.48          # ORM für SQLite Datenbankzugriff
 
 # --- Datei-Parsing ---
 pymupdf==1.24.0             # PDF-Text extrahieren
