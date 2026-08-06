@@ -17,7 +17,7 @@ python-docx==1.1.2          # Word-Dateien (.docx) lesen
 python-pptx==1.0.2          # PowerPoint-Dateien (.pptx) lesen
 openpyxl==3.1.5             # Excel-Dateien (.xlsx) lesen
 pytesseract==0.3.13         # OCR: Text aus Bildern extrahieren
-Pillow==11.0.0              # Bildverarbeitung (für OCR)
+Pillow==12.1.1              # Bildverarbeitung (für OCR)
 markdown==3.7               # Markdown-Dateien lesen
 beautifulsoup4==4.14.3      # HTML-Parser (Gemini Takeout HTML)
 lxml==5.3.0                 # Schneller XML/HTML-Parser-Backend für BS4
