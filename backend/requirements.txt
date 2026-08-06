@@ -13,7 +13,7 @@ sqlalchemy==2.0.35          # ORM für SQLite Datenbankzugriff
 
 # --- Datei-Parsing ---
 pymupdf==1.24.0             # PDF-Text extrahieren
-python-docx==1.1.2          # Word-Dateien (.docx) lesen
+python-docx==1.2.0          # Word-Dateien (.docx) lesen
 python-pptx==1.0.2          # PowerPoint-Dateien (.pptx) lesen
 openpyxl==3.1.5             # Excel-Dateien (.xlsx) lesen
 pytesseract==0.3.13         # OCR: Text aus Bildern extrahieren
